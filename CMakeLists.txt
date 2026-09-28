@@ -131,8 +131,34 @@ endif()
 # we do this manually by adding flags.
 set(ATOMIC_LINKAGE_FIX FALSE)
 if(MSVC)
-    # Detect target architecture using CMAKE_SYSTEM_PROCESSOR or compiler checks
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
+    # Detect target architecture. Prefer CMAKE_GENERATOR_PLATFORM (set by the
+    # VS generator's -A flag, reflects the CROSS-COMPILE target) over
+    # CMAKE_SYSTEM_PROCESSOR, which under a VS cross build reports the BUILD
+    # machine (e.g. AMD64 runner building ARM64) and misroutes the setjmp
+    # wrapper to MASM (upstream issue #2193).
+    if(CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
+        set(MSVC_FLAG -D__aarch64__)
+        set(MSVC_TCG_PATH /I${CMAKE_CURRENT_SOURCE_DIR}/qemu/tcg/aarch64)
+        set(MSVC_TARGET_ARCH "aarch64")
+    elseif(CMAKE_GENERATOR_PLATFORM MATCHES "Win32")
+        set(MSVC_FLAG -D__i386__)
+        set(MSVC_TCG_PATH /I${CMAKE_CURRENT_SOURCE_DIR}/qemu/tcg/i386)
+        set(MSVC_TARGET_ARCH "i386")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64")
+        set(MSVC_FLAG -D__aarch64__)
+        set(MSVC_TCG_PATH /I${CMAKE_CURRENT_SOURCE_DIR}/qemu/tcg/aarch64)
+        set(MSVC_TARGET_ARCH "aarch64")
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(MSVC_FLAG -D__x86_64__)
+        set(MSVC_TCG_PATH /I${CMAKE_CURRENT_SOURCE_DIR}/qemu/tcg/i386)
+        set(MSVC_TARGET_ARCH "x86_64")
+    elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(MSVC_FLAG -D__i386__)
+        set(MSVC_TCG_PATH /I${CMAKE_CURRENT_SOURCE_DIR}/qemu/tcg/i386)
+        set(MSVC_TARGET_ARCH "i386")
+    else()
+        message(FATAL_ERROR "Unsupported architecture!")
+    endif()
         set(MSVC_FLAG -D__aarch64__)
         set(MSVC_TCG_PATH /I${CMAKE_CURRENT_SOURCE_DIR}/qemu/tcg/aarch64)
         set(MSVC_TARGET_ARCH "aarch64")
