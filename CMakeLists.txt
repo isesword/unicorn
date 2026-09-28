@@ -1276,10 +1276,19 @@ if(MSVC)
             )
             set(UNICORN_SRCS ${UNICORN_SRCS} "${CMAKE_CURRENT_SOURCE_DIR}/build/setjmp-wrapper-win32.dir/setjmp-wrapper-win32.obj")
         else()
-            enable_language(ASM_MASM)
+            # CMake's ASM_MASM language has no ARM64-platform implementation
+            # ("Found assembler: ml" → masm.targets aborts), so only enable it
+            # when actually building for an x86-family target. On ARM64 the
+            # wrapper below is replaced by the armasm64-built variant and this
+            # x64 .asm file is simply not compiled.
+            if(NOT MSVC_TARGET_ARCH STREQUAL "aarch64")
+                enable_language(ASM_MASM)
+            endif()
         endif()
         set(UNICORN_COMMON_SRCS ${UNICORN_COMMON_SRCS} qemu/util/setjmp-wrapper-win32.asm)
-        set_property(SOURCE qemu/util/setjmp-wrapper-win32.asm PROPERTY LANGUAGE ASM_MASM)
+        if(NOT MSVC_TARGET_ARCH STREQUAL "aarch64")
+            set_property(SOURCE qemu/util/setjmp-wrapper-win32.asm PROPERTY LANGUAGE ASM_MASM)
+        endif()
     endif()
 else()
     set(UNICORN_COMMON_SRCS
